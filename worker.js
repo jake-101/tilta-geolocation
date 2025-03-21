@@ -38,8 +38,8 @@ export default {
         code: cf.region_code,
         name: cf.region
       },
-      languages: languages,
       preferredLanguage: languages[0]?.code || null,
+      languages: languages,
       asn: cf.asn,
       asOrganization: cf.asOrganization,
       // Optional detailed info if requested
