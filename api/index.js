@@ -20,106 +20,125 @@ const getAddress = isDev
   ? () => '127.0.0.1'
   : headers => headers.get('cf-connecting-ip')
 
-const getIpCountry = isDev ? () => 'ES' : headers => headers.get('cf-ipcountry')
+const getIpCountry = isDev ? () => 'US' : headers => headers.get('cf-ipcountry')
 
-const getIpCity = isDev ? () => 'Murcia' : headers => headers.get('cf-ipcity')
+const getIpCity = isDev
+  ? () => 'Los Angeles'
+  : headers => headers.get('cf-ipcity')
 
 const HEADERS = { 'access-control-allow-origin': '*' }
 
-export default async req => {
-  const searchParams = new URLSearchParams(req.url.split('?')[1])
-  const { pathname } = new URL(req.url)
+export default {
+  async fetch (request) {
+    const searchParams = new URLSearchParams(request.url.split('?')[1])
+    const { pathname } = new URL(request.url)
 
-  if (pathname === '/countries') {
-    const filter = (() => {
-      let value = searchParams.get('alpha2')
-      if (value) return { key: 'alpha2', value }
-      value = searchParams.get('alpha3')
-      if (value) return { key: 'alpha3', value }
-      return { key: 'numeric', value: searchParams.get('numeric') }
-    })()
+    if (pathname === '/countries') {
+      const filter = (() => {
+        let value = searchParams.get('alpha2')
+        if (value) return { key: 'alpha2', value }
+        value = searchParams.get('alpha3')
+        if (value) return { key: 'alpha3', value }
+        return { key: 'numeric', value: searchParams.get('numeric') }
+      })()
 
-    const result = filter
-      ? countries.find(({ country }) => country[filter.key] === filter.value)
-      : countries
-    return Response.json(result, { headers: HEADERS })
-  }
+      const result = filter
+        ? countries.find(({ country }) => country[filter.key] === filter.value)
+        : countries
+      return Response.json(result, { headers: HEADERS })
+    }
 
-  if (pathname === '/airports') {
-    return Response.json(airports, { headers: HEADERS })
-  }
+    if (pathname === '/airports') {
+      return Response.json(airports, { headers: HEADERS })
+    }
 
-  const { headers } = req
-  const countryAlpha2 = getIpCountry(headers)
+    const { headers } = request
+    const countryAlpha2 = getIpCountry(headers)
+    console.log('Country code from IP:', countryAlpha2)
 
-  const findCountry = countries.find(({ country }) => {
-    return country.alpha2 === countryAlpha2
-  })
+    const findCountry = countries.find(({ country }) => {
+      return country.alpha2 === countryAlpha2
+    })
 
-  const {
-    country,
-    continent,
-    capitals,
-    callingCodes,
-    currencies,
-    eeaMember,
-    euMember,
-    languages,
-    tlds
-  } = findCountry
+    if (!findCountry) {
+      console.error(`No country found for alpha2 code: ${countryAlpha2}`)
+      return Response.json(
+        {
+          error: 'Country not found',
+          message: `Unable to find country information for code: ${countryAlpha2}`,
+          code: 'COUNTRY_NOT_FOUND'
+        },
+        {
+          status: 404,
+          headers: HEADERS
+        }
+      )
+    }
 
-  const address = getAddress(headers)
+    const {
+      country,
+      continent,
+      capitals,
+      callingCodes,
+      currencies,
+      eeaMember,
+      euMember,
+      languages,
+      tlds
+    } = findCountry
 
-  const coordinates = {
-    latitude: headers.get('cf-iplatitude'),
-    longitude: headers.get('cf-iplongitude')
-  }
+    const address = getAddress(headers)
 
-  const payload = {
-    ip: toIP(address),
-    city: toCity({
-      name: getIpCity(headers),
-      postalCode: headers.get('cf-postal-code') ?? null,
-      metroCode: headers.get('cf-metro-code') ?? null
-    }),
-    country,
-    continent,
-    capitals,
-    currencies,
-    callingCodes,
-    eeaMember,
-    euMember,
-    languages,
-    tlds,
-    airport: airport(coordinates, airports),
-    coordinates,
-    timezone: headers.get('cf-timezone')
-  }
+    const coordinates = {
+      latitude: headers.get('cf-iplatitude'),
+      longitude: headers.get('cf-iplongitude')
+    }
 
-  if (searchParams.get('headers') !== null) {
-    payload.headers = Object.fromEntries(req.headers)
-  }
+    const payload = {
+      ip: toIP(address),
+      city: toCity({
+        name: getIpCity(headers),
+        postalCode: headers.get('cf-postal-code') ?? null,
+        metroCode: headers.get('cf-metro-code') ?? null
+      }),
+      country,
+      continent,
+      capitals,
+      currencies,
+      callingCodes,
+      eeaMember,
+      euMember,
+      languages,
+      tlds,
+      airport: airport(coordinates, airports),
+      coordinates,
+      timezone: headers.get('cf-timezone')
+    }
 
-  if (searchParams.get('asn') !== null) {
-    payload.asn = await cloudflare(`asns/ip?ip=${address}`)
-      .then(body => body.result.asn)
-      .then(asn => ({
-        id: asn.asn,
-        name: asn.aka || asn.name,
-        company: asn.nameLong || null,
-        website: asn.website || null,
-        country: { name: asn.countryName, alpha2: asn.country },
-        users: asn.estimatedUsers?.estimatedUsers,
-        more: `https://radar.cloudflare.com/quality/as${asn.asn}`
-      }))
-  }
+    if (searchParams.get('headers') !== null) {
+      payload.headers = Object.fromEntries(request.headers)
+    }
 
-  if (!req.headers.get('accept').includes('text/html')) {
-    return Response.json(payload, { headers: HEADERS })
-  }
+    if (searchParams.get('asn') !== null) {
+      payload.asn = await cloudflare(`asns/ip?ip=${address}`)
+        .then(body => body.result.asn)
+        .then(asn => ({
+          id: asn.asn,
+          name: asn.aka || asn.name,
+          company: asn.nameLong || null,
+          website: asn.website || null,
+          country: { name: asn.countryName, alpha2: asn.country },
+          users: asn.estimatedUsers?.estimatedUsers,
+          more: `https://radar.cloudflare.com/quality/as${asn.asn}`
+        }))
+    }
 
-  return new Response(
-    `<!DOCTYPE html><html lang="en">
+    if (!request.headers.get('accept').includes('text/html')) {
+      return Response.json(payload, { headers: HEADERS })
+    }
+
+    return new Response(
+      `<!DOCTYPE html><html lang="en">
   <head>
     <title>Microlink Geolocation</title>
     <meta property="og:description" content="Get detailed information about the incoming request based on the IP address." >
@@ -196,13 +215,7 @@ export default async req => {
     <pre>
 <code>${JSON.stringify(payload, null, 2)}</code>
     </pre>
-    <a href="https://github.com/microlinkhq/geolocation" target="_blank" rel="noopener noreferrer nofollow" class="github-corner" aria-label="View source on GitHub">
-      <svg width="80" height="80" viewBox="0 0 250 250" style="position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true">
-        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
-        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
-        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
-      </svg>
-    </a>
+   
     <script type="module">
       import {
         highlight
@@ -212,10 +225,11 @@ export default async req => {
     </script>
   </body>
 </html>`,
-    {
-      headers: {
-        'content-type': 'text/html;charset=UTF-8'
+      {
+        headers: {
+          'content-type': 'text/html;charset=UTF-8'
+        }
       }
-    }
-  )
+    )
+  }
 }

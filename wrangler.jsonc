@@ -1,0 +1,12 @@
+{
+    "name": "tilta-geolocation",
+    "main": "api/index.js",
+    "assets": {
+        "directory": "./data",
+        "not_found_handling": "404-page"
+      },
+    "compatibility_flags": [
+        "nodejs_compat"
+      ],
+      "compatibility_date": "2024-09-23"
+  }

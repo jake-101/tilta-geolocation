@@ -38,3 +38,4 @@ coverage
 .envrc
 .next
 .vercel
+.wrangler
