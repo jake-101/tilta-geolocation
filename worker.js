@@ -21,6 +21,7 @@ export default {
       country: {
         code: cf.country,
         name: cf.country_name,
+        isEU: cf.isEUCountry === "1" // Cloudflare returns "1" for true
       },
       city: {
         name: cf.city,
@@ -45,7 +46,6 @@ export default {
       details: headers.get('accept').includes('text/html') ? {
         colo: cf.colo,
         metroCode: cf.metroCode,
-        isEUCountry: cf.isEUCountry,
         tlsCipher: cf.tlsCipher,
         tlsVersion: cf.tlsVersion,
         httpProtocol: cf.httpProtocol
