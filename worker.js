@@ -3,6 +3,19 @@ export default {
     const headers = request.headers
     const cf = request.cf // Cloudflare-specific properties
 
+    // Parse Accept-Language header
+    const acceptLanguage = headers.get('Accept-Language') || ''
+    const languages = acceptLanguage
+      .split(',')
+      .map(lang => {
+        const [code, q = 'q=1.0'] = lang.trim().split(';')
+        return {
+          code: code,
+          quality: parseFloat(q.split('=')[1])
+        }
+      })
+      .sort((a, b) => b.quality - a.quality)
+
     const payload = {
       ip: headers.get('cf-connecting-ip'),
       country: {
@@ -24,6 +37,8 @@ export default {
         code: cf.region_code,
         name: cf.region
       },
+      languages: languages,
+      preferredLanguage: languages[0]?.code || null,
       asn: cf.asn,
       asOrganization: cf.asOrganization,
       // Optional detailed info if requested
