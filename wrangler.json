@@ -1,18 +1,18 @@
 {
     "name": "tilta-geolocation",
     "main": "api/index.js",
+    "compatibility_flags": ["nodejs_compat"],
     "vars": {
-        "ENVIRONMENT": "production"
+        "THE_ENVIRONMENT": "production"
     },
     "env": {
         "dev": {
             "vars": {
-                "ENVIRONMENT": "development"
+                "THE_ENVIRONMENT": "development"
             }
         }
     },
     "compatibility_date": "2025-03-19",
-    "compatibility_flags": ["nodejs_compat"],
     "assets": {
         "directory": "./data",
         "not_found_handling": "404-page"

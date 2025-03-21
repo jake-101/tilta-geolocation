@@ -13,16 +13,17 @@ export const config = { runtime: 'edge' }
 
 export default {
 
-  async fetch (request) {
+  async fetch (request, env, ctx) {
 
-    const isDev = process.env.ENVIRONMENT === 'development'
-    
+
+    const getEnv = env.THE_ENVIRONMENT
+    const isDev = getEnv === 'development'
     const cloudflare = path =>
       fetch(`https://api.cloudflare.com/client/v4/radar/entities/${path}`, {
-        headers: { authorization: process.env.CLOUDFLARE_AUTHORIZATION }
+        headers: { authorization: env.CLOUDFLARE_AUTHORIZATION }
       }).then(res => res.json())
     
-    const getAddress = isDev
+      const getAddress = isDev
       ? () => '99.129.219.232'
       : headers => headers.get('cf-connecting-ip')
     
@@ -33,6 +34,8 @@ export default {
       : headers => headers.get('cf-ipcity')
     
     const HEADERS = { 'access-control-allow-origin': '*' }
+    
+
 
     const searchParams = new URLSearchParams(request.url.split('?')[1])
     const { pathname } = new URL(request.url)
