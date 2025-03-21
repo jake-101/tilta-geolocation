@@ -9,27 +9,31 @@ import airports from '../data/airports.json'
 
 export const config = { runtime: 'edge' }
 
-const isDev = process.env.NODE_ENV === 'development'
 
-const cloudflare = path =>
-  fetch(`https://api.cloudflare.com/client/v4/radar/entities/${path}`, {
-    headers: { authorization: process.env.CLOUDFLARE_AUTHORIZATION }
-  }).then(res => res.json())
-
-const getAddress = isDev
-  ? () => '127.0.0.1'
-  : headers => headers.get('cf-connecting-ip')
-
-const getIpCountry = isDev ? () => 'US' : headers => headers.get('cf-ipcountry')
-
-const getIpCity = isDev
-  ? () => 'Los Angeles'
-  : headers => headers.get('cf-ipcity')
-
-const HEADERS = { 'access-control-allow-origin': '*' }
 
 export default {
+
   async fetch (request) {
+
+    const isDev = process.env.ENVIRONMENT === 'development'
+    
+    const cloudflare = path =>
+      fetch(`https://api.cloudflare.com/client/v4/radar/entities/${path}`, {
+        headers: { authorization: process.env.CLOUDFLARE_AUTHORIZATION }
+      }).then(res => res.json())
+    
+    const getAddress = isDev
+      ? () => '99.129.219.232'
+      : headers => headers.get('cf-connecting-ip')
+    
+    const getIpCountry = isDev ? () => 'US' : headers => headers.get('cf-ipcountry')
+    
+    const getIpCity = isDev
+      ? () => 'Los Angeles'
+      : headers => headers.get('cf-ipcity')
+    
+    const HEADERS = { 'access-control-allow-origin': '*' }
+
     const searchParams = new URLSearchParams(request.url.split('?')[1])
     const { pathname } = new URL(request.url)
 
@@ -140,7 +144,7 @@ export default {
     return new Response(
       `<!DOCTYPE html><html lang="en">
   <head>
-    <title>Microlink Geolocation</title>
+    <title>Geolocation</title>
     <meta property="og:description" content="Get detailed information about the incoming request based on the IP address." >
     <meta property="og:image" content="https://cdn.jsdelivr.net/gh/microlinkhq/geolocation/design/share.png" >
     <meta name="color-scheme" content="light dark">

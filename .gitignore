@@ -39,3 +39,4 @@ coverage
 .next
 .vercel
 .wrangler
+.vars
